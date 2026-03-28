@@ -1,52 +1,41 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="utf-8">
-  <title>MAPA</title>
+    <title>Mapa</title>
+    <meta charset="utf-8" />
 
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 
-  <!-- Leaflet -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
-  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-
-  <style>
-    body {
-      margin: 0;
-      font-family: Arial;
-    }
-
-    h1, p {
-      text-align: center;
-    }
-
-    /* 🔥 CLAVE */
-    #map {
-      height: 80vh;
-      width: 100%;
-    }
-  </style>
+    <style>
+        #map {
+            height: 100vh; /* IMPORTANTE */
+            width: 100%;
+        }
+    </style>
 </head>
-
 <body>
 
-<h1>MAPA</h1>
-<p>Mapa con leaflet desde google sheets</p>
-
+<h2>MAPA</h2>
 <div id="map"></div>
 
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
 <script>
+    // Crear mapa centrado en Lima
+    var map = L.map('map').setView([-12.0464, -77.0428], 13);
 
-console.log("MAPA INICIANDO"); // 👈 prueba
+    // Cargar mapa base
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap'
+    }).addTo(map);
 
-// Crear mapa
-const map = L.map('map').setView([-9.19, -75.0152], 6);
-
-// Capa base
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  attribution: '© OpenStreetMap'
-}).addTo(map);
-
+    // EJEMPLO de marcador
+    L.marker([-12.0464, -77.0428])
+        .addTo(map)
+        .bindPopup("Ejemplo en Lima")
+        .openPopup();
 </script>
 
 </body>
