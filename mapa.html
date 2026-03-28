@@ -4,7 +4,6 @@
   <meta charset="UTF-8">
   <title>Mapa Interactivo</title>
 
-  <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 
   <style>
@@ -14,7 +13,7 @@
     }
 
     #map {
-      height: 100vh; /* ocupa toda la pantalla */
+      height: 100vh;
       width: 100%;
     }
   </style>
@@ -24,24 +23,19 @@
 
 <div id="map"></div>
 
-<!-- Leaflet JS -->
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
 <script>
-  // Crear mapa centrado en Lima
   var map = L.map('map').setView([-12.0464, -77.0428], 13);
 
-  // Cargar mapa base
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '© OpenStreetMap'
   }).addTo(map);
 
-  // Marcador simple
   L.marker([-12.0464, -77.0428]).addTo(map)
     .bindPopup("📍 Centro de Lima")
     .openPopup();
 
-  // Ejemplo con varios puntos (puedes editar)
   var puntos = [
     { lat: -12.05, lng: -77.04, nombre: "Punto 1" },
     { lat: -12.06, lng: -77.03, nombre: "Punto 2" }
@@ -51,7 +45,6 @@
     L.marker([p.lat, p.lng]).addTo(map)
       .bindPopup(p.nombre);
   });
-
 </script>
 
 </body>
