@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Mapa Interactivo</title>
+  <title>Mapa Perú</title>
 
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 
@@ -26,25 +26,85 @@
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
 <script>
-  var map = L.map('map').setView([-12.0464, -77.0428], 13);
+document.addEventListener("DOMContentLoaded", function() {
+
+  // 🇵🇪 Vista inicial Perú
+  var map = L.map('map').setView([-9.19, -75.0152], 6);
 
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '© OpenStreetMap'
   }).addTo(map);
 
-  L.marker([-12.0464, -77.0428]).addTo(map)
-    .bindPopup("📍 Centro de Lima")
-    .openPopup();
+  // 🎯 ICONOS por tipo
+  var iconos = {
+    ipress: L.icon({
+      iconUrl: 'https://cdn-icons-png.flaticon.com/512/2967/2967350.png',
+      iconSize: [35, 35]
+    }),
+    fabricante: L.icon({
+      iconUrl: 'https://cdn-icons-png.flaticon.com/512/1995/1995574.png',
+      iconSize: [35, 35]
+    }),
+    saneamiento: L.icon({
+      iconUrl: 'https://cdn-icons-png.flaticon.com/512/728/728093.png',
+      iconSize: [35, 35]
+    }),
+    importador: L.icon({
+      iconUrl: 'https://cdn-icons-png.flaticon.com/512/2921/2921822.png',
+      iconSize: [35, 35]
+    }),
+    default: L.icon({
+      iconUrl: 'https://cdn-icons-png.flaticon.com/512/684/684908.png',
+      iconSize: [35, 35]
+    })
+  };
 
-  var puntos = [
-    { lat: -12.05, lng: -77.04, nombre: "Punto 1" },
-    { lat: -12.06, lng: -77.03, nombre: "Punto 2" }
-  ];
+  // 📡 Cargar datos desde Google Sheets
+  fetch("https://docs.google.com/spreadsheets/d/e/2PACX-1vT5Mq_bCbWMooRZGFoXCVe4vt4vVlnWOaDwADRnO-pkNsC17935tuPbSzlwmT8MJUEF_oEzsGt37kEw/pub?gid=306903085&single=true&output=csv")
+    .then(response => response.text())
+    .then(data => {
 
-  puntos.forEach(function(p) {
-    L.marker([p.lat, p.lng]).addTo(map)
-      .bindPopup(p.nombre);
-  });
+      var filas = data.split("\n");
+      var bounds = [];
+
+      filas.slice(1).forEach(fila => {
+
+        var columnas = fila.split(",");
+
+        // 📍 Separar lat y lng (misma columna)
+        var coords = columnas[0].split(",");
+
+        var lat = parseFloat(coords[0]);
+        var lng = parseFloat(coords[1]);
+
+        // 🏢 Tipo establecimiento
+        var tipo = (columnas[1] || "").toLowerCase();
+
+        if (!isNaN(lat) && !isNaN(lng)) {
+
+          bounds.push([lat, lng]);
+
+          var icono = iconos.default;
+
+          if (tipo.includes("ipress")) icono = iconos.ipress;
+          else if (tipo.includes("fabricante")) icono = iconos.fabricante;
+          else if (tipo.includes("saneamiento")) icono = iconos.saneamiento;
+          else if (tipo.includes("importador")) icono = iconos.importador;
+
+          L.marker([lat, lng], { icon: icono }).addTo(map)
+            .bindPopup("🏢 Tipo: " + tipo);
+        }
+
+      });
+
+      // 🔥 Ajustar mapa automáticamente a los puntos
+      if (bounds.length > 0) {
+        map.fitBounds(bounds);
+      }
+
+    });
+
+});
 </script>
 
 </body>
