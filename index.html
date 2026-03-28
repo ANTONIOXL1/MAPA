@@ -89,11 +89,27 @@ document.addEventListener("DOMContentLoaded", function() {
 
             var icono = iconos.default;
 
-            if (tipo.includes("ipress")) icono = iconos.ipress;
-            else if (tipo.includes("fabricante")) icono = iconos.fabricante;
-            else if (tipo.includes("saneamiento")) icono = iconos.saneamiento;
-            else if (tipo.includes("importador")) icono = iconos.importador;
+           var icono = iconos.default;
 
+// 🔥 condiciones inteligentes
+if (tipo.includes("ipress") || tipo.includes("hospital") || tipo.includes("clinica")) {
+  icono = iconos.ipress;
+}
+else if (tipo.includes("fabricante") || tipo.includes("industria")) {
+  icono = iconos.fabricante;
+}
+else if (tipo.includes("saneamiento") || tipo.includes("agua")) {
+  icono = iconos.saneamiento;
+}
+else if (tipo.includes("importador")) {
+  icono = iconos.importador;
+}
+else if (tipo.includes("farmacia") || tipo.includes("botica")) {
+  icono = iconos.farmacia;
+}
+else if (tipo.includes("laboratorio")) {
+  icono = iconos.laboratorio;
+}
             L.marker([lat, lng], { icon: icono }).addTo(map)
               .bindPopup("🏢 Tipo: " + tipo);
           }
