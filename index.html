@@ -2,117 +2,100 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Mapa Perú</title>
-
+  <title>Mapa Perú - Con Iconos Condicionales</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
-
   <style>
-    body { margin: 0; }
-    #map { height: 100vh; width: 100%; }
-
-    .leaflet-marker-icon,
-    .leaflet-div-icon {
-      background: transparent !important;
-      border: none !important;
-    }
+    body { margin:0; }
+    #map { height:100vh; width:100%; }
+    .leaflet-marker-icon, .leaflet-div-icon { background: transparent !important; border: none !important; }
   </style>
 </head>
-
 <body>
-
 <div id="map"></div>
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-
 <script>
-document.addEventListener("DOMContentLoaded", function() {
+document.addEventListener("DOMContentLoaded", function(){
 
-  // 🇵🇪 MAPA INICIAL
+  // 1️⃣ Crear mapa centrado en Perú
   var map = L.map('map').setView([-9.19, -75.0152], 6);
 
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '© OpenStreetMap'
   }).addTo(map);
 
-  // 🔥 FUNCIÓN ICONO LIMPIO
+  // 2️⃣ Función para crear icono
   function crearIcono(url) {
     return L.divIcon({
       html: `<img src="${url}" style="width:35px;height:35px;">`,
       className: '',
-      iconSize: [35, 35],
-      iconAnchor: [17, 35]
+      iconSize: [35,35],
+      iconAnchor: [17,35]
     });
   }
 
-  // 🎨 TUS ICONOS (CAMBIA SOLO SI CAMBIAS NOMBRES)
-  var iconos = {
-    ipress: crearIcono('https://antonioxl1.github.io/MAPA/iconos/ipress_verde.png'),
-    saneamiento: crearIcono('https://antonioxl1.github.io/MAPA/iconos/ipress_verde.png'),
-    fabricante: crearIcono('https://antonioxl1.github.io/MAPA/iconos/fabrica_verde.png'),
-    importador: crearIcono('https://antonioxl1.github.io/MAPA/iconos/fabricante_verde.png'),
-    default: crearIcono('https://antonioxl1.github.io/MAPA/iconos/ipress_verde.png')
-  };
+  // 3️⃣ Mapear iconos según Tipo + Resultado
+  function seleccionarIcono(tipo, resultado) {
+    tipo = tipo.toLowerCase();
+    resultado = resultado.toLowerCase();
+    
+    if((tipo=="ipress" || tipo=="emp. saneamiento") && resultado=="conforme") return crearIcono('https://antonioxl1.github.io/MAPA/iconos/ipress_verde.png');
+    if((tipo=="ipress" || tipo=="emp. saneamiento") && resultado=="no conforme") return crearIcono('https://antonioxl1.github.io/MAPA/iconos/ipress_rojo.png');
+    if(tipo=="fabricante" && resultado=="conforme") return crearIcono('https://antonioxl1.github.io/MAPA/iconos/fabrica_verde.png');
+    if(tipo=="fabricante" && resultado=="no conforme") return crearIcono('https://antonioxl1.github.io/MAPA/iconos/fabrica_rojo.png');
+    if(tipo=="importador" && resultado=="conforme") return crearIcono('https://antonioxl1.github.io/MAPA/iconos/fabricante_verde.png');
+    if(tipo=="importador" && resultado=="no conforme") return crearIcono('https://antonioxl1.github.io/MAPA/iconos/fabricante_rojo.png');
 
-  // 📡 CARGAR CSV
+    // Default
+    return crearIcono('https://antonioxl1.github.io/MAPA/iconos/ipress_verde.png');
+  }
+
+  // 4️⃣ Cargar CSV de Google Sheets
   fetch("https://docs.google.com/spreadsheets/d/e/2PACX-1vT5Mq_bCbWMooRZGFoXCVe4vt4vVlnWOaDwADRnO-pkNsC17935tuPbSzlwmT8MJUEF_oEzsGt37kEw/pub?gid=306903085&single=true&output=csv")
-    .then(res => res.text())
-    .then(data => {
+  .then(res => res.text())
+  .then(data => {
 
-      var filas = data.split("\n");
+    var filas = data.split("\n");
 
-      filas.slice(1).forEach(fila => {
+    filas.slice(1).forEach(fila => {
+      if(!fila.trim()) return;
 
-        if (!fila.trim()) return;
+      // Separar columnas respetando comillas
+      var columnas = fila.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
 
-        var columnas = fila.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+      var direccion = columnas[1] || "Sin nombre";
+      var ubicacion = (columnas[2] || "").replace(/"/g,'').trim();
+      var tipo = (columnas[3] || "").trim();
+      var resultado = (columnas[4] || "").trim(); // Nueva columna Resultado
 
-        if (columnas.length < 3) return;
+      if(!ubicacion.includes(",")) return;
+      var coords = ubicacion.split(",");
+      var lat = parseFloat(coords[0]);
+      var lng = parseFloat(coords[1]);
+      if(isNaN(lat) || isNaN(lng)) return;
 
-        var nombre = columnas[1] || "Sin nombre";
-        var ubicacion = (columnas[2] || "").replace(/"/g, '').trim();
-        var tipo = (columnas[3] || "").toLowerCase().trim();
+      // Seleccionar icono según tipo + resultado
+      var icono = seleccionarIcono(tipo, resultado);
 
-        if (!ubicacion.includes(",")) return;
-
-        var coords = ubicacion.split(",");
-        var lat = parseFloat(coords[0]);
-        var lng = parseFloat(coords[1]);
-
-        if (isNaN(lat) || isNaN(lng)) return;
-
-        // 🔥 ASIGNACIÓN DE ICONO
-        var icono = iconos.default;
-
-        if (tipo.includes("ipress")) {
-          icono = iconos.ipress;
-        } else if (tipo.includes("saneamiento")) {
-          icono = iconos.saneamiento;
-        } else if (tipo.includes("fabricante")) {
-          icono = iconos.fabricante;
-        } else if (tipo.includes("importador")) {
-          icono = iconos.importador;
-        }
-
-        // 📍 CREAR MARCADOR
-        L.marker([lat, lng], { icon: icono })
-          .addTo(map)
-          .bindPopup(`
-            <b>${nombre}</b><br>
-            Tipo: ${tipo}<br>
-            Lat: ${lat}<br>
-            Lng: ${lng}
-          `);
-
-      });
-
-    })
-    .catch(err => {
-      console.error(err);
-      alert("Error cargando datos");
+      // Agregar marcador
+      L.marker([lat,lng], {icon: icono})
+        .addTo(map)
+        .bindPopup(`
+          <b>${direccion}</b><br>
+          Tipo: ${tipo}<br>
+          Resultado: ${resultado}<br>
+          Lat: ${lat}<br>
+          Lng: ${lng}
+        `);
     });
+
+  })
+  .catch(err => {
+    console.error(err);
+    alert("Error cargando CSV");
+  });
 
 });
 </script>
-
 </body>
 </html>
