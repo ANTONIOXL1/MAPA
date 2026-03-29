@@ -7,20 +7,8 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 
   <style>
-    body { margin: 0; font-family: Arial; }
+    body { margin: 0; }
     #map { height: 100vh; width: 100%; }
-
-    .legend {
-      background: white;
-      padding: 10px;
-      border-radius: 8px;
-      line-height: 18px;
-    }
-    .legend img {
-      width: 20px;
-      vertical-align: middle;
-      margin-right: 5px;
-    }
   </style>
 </head>
 
@@ -33,14 +21,14 @@
 <script>
 document.addEventListener("DOMContentLoaded", function() {
 
-  // 🇵🇪 Vista Perú
+  // 🇵🇪 MAPA INICIAL PERÚ
   var map = L.map('map').setView([-9.19, -75.0152], 6);
 
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '© OpenStreetMap'
   }).addTo(map);
 
-  // 🎨 ICONOS DESDE TU GITHUB
+  // 🔥 ICONOS (ASEGÚRATE QUE EXISTAN)
   var iconos = {
     ipress: L.icon({
       iconUrl: 'https://antonioxl1.github.io/MAPA/iconos/ipress_verde.png',
@@ -69,81 +57,65 @@ document.addEventListener("DOMContentLoaded", function() {
     })
   };
 
-  // 📡 Cargar CSV
+  // 🧪 PRUEBA (SI ESTO NO SALE → PROBLEMA DE ICONOS)
+  L.marker([-12.0464, -77.0428], {
+    icon: iconos.ipress
+  }).addTo(map).bindPopup("PRUEBA LIMA");
+
+  // 📡 CARGAR CSV
   fetch("https://docs.google.com/spreadsheets/d/e/2PACX-1vT5Mq_bCbWMooRZGFoXCVe4vt4vVlnWOaDwADRnO-pkNsC17935tuPbSzlwmT8MJUEF_oEzsGt37kEw/pub?gid=306903085&single=true&output=csv")
     .then(res => res.text())
     .then(data => {
 
       var filas = data.split("\n");
-      var bounds = [];
 
       filas.slice(1).forEach(fila => {
 
+        if (!fila) return;
+
         var columnas = fila.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+
+        if (columnas.length < 3) return;
 
         var ubicacion = (columnas[2] || "").replace(/"/g, '').trim();
         var tipo = (columnas[3] || "").toLowerCase().trim();
 
-        if (ubicacion.includes(",")) {
+        if (!ubicacion.includes(",")) return;
 
-          var coords = ubicacion.split(",");
-          var lat = parseFloat(coords[0]);
-          var lng = parseFloat(coords[1]);
+        var coords = ubicacion.split(",");
+        var lat = parseFloat(coords[0]);
+        var lng = parseFloat(coords[1]);
 
-          if (!isNaN(lat) && !isNaN(lng)) {
+        if (isNaN(lat) || isNaN(lng)) return;
 
-            bounds.push([lat, lng]);
+        // 🔥 ASIGNAR ICONO
+        var icono = iconos.default;
 
-            var icono = iconos.default;
-
-            // 🔥 CONDICIONES
-            if (tipo.includes("ipress")) {
-              icono = iconos.ipress;
-            }
-            else if (tipo.includes("saneamiento")) {
-              icono = iconos.saneamiento;
-            }
-            else if (tipo.includes("fabricante")) {
-              icono = iconos.fabricante;
-            }
-            else if (tipo.includes("importador")) {
-              icono = iconos.importador;
-            }
-
-            L.marker([lat, lng], { icon: icono })
-              .addTo(map)
-              .bindPopup("🏢 Tipo: " + tipo);
-          }
+        if (tipo.includes("ipress")) {
+          icono = iconos.ipress;
+        }
+        else if (tipo.includes("saneamiento")) {
+          icono = iconos.saneamiento;
+        }
+        else if (tipo.includes("fabricante")) {
+          icono = iconos.fabricante;
+        }
+        else if (tipo.includes("importador")) {
+          icono = iconos.importador;
         }
 
-      });
+        // 📍 CREAR MARCADOR
+        L.marker([lat, lng], { icon: icono })
+          .addTo(map)
+          .bindPopup("Tipo: " + tipo);
 
-      if (bounds.length > 0) {
-        map.fitBounds(bounds);
-      }
+      });
 
     })
     .catch(err => {
       console.error(err);
-      alert("Error cargando datos");
+      alert("Error cargando CSV");
     });
-
-  // 🏷️ LEYENDA
-  var legend = L.control({position: 'bottomright'});
-
-  legend.onAdd = function () {
-    var div = L.DomUtil.create('div', 'legend');
-
-    div.innerHTML += "<b>Tipos</b><br>";
-    div.innerHTML += "<img src='https://antonioxl1.github.io/MAPA/iconos/ipress_verde.png'> IPRESS<br>";
-    div.innerHTML += "<img src='https://antonioxl1.github.io/MAPA/iconos/ipress_verde.png'> Saneamiento<br>";
-    div.innerHTML += "<img src='https://antonioxl1.github.io/MAPA/iconos/fabrica_verde.png'> Fabricante<br>";
-    div.innerHTML += "<img src='https://antonioxl1.github.io/MAPA/iconos/fabricante_verde.png'> Importador<br>";
-
-    return div;
-  };
-
-  legend.addTo(map);
 
 });
 </script>
