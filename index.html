@@ -10,13 +10,11 @@
     body { margin: 0; font-family: Arial; }
     #map { height: 100vh; width: 100%; }
 
-    /* 🏷️ Leyenda */
     .legend {
       background: white;
       padding: 10px;
-      line-height: 18px;
-      color: #333;
       border-radius: 8px;
+      line-height: 18px;
     }
     .legend img {
       width: 20px;
@@ -45,32 +43,29 @@ document.addEventListener("DOMContentLoaded", function() {
   // 🎨 ICONOS DESDE TU GITHUB
   var iconos = {
     ipress: L.icon({
-      iconUrl: 'https://antonioxl1.github.io/MAPA/iconos/ipress_rojo.png',
-      iconSize: [35, 35]
+      iconUrl: 'https://antonioxl1.github.io/MAPA/iconos/ipress_verde.png',
+      iconSize: [35, 35],
+      iconAnchor: [17, 35]
     }),
     saneamiento: L.icon({
       iconUrl: 'https://antonioxl1.github.io/MAPA/iconos/ipress_verde.png',
-      iconSize: [35, 35]
+      iconSize: [35, 35],
+      iconAnchor: [17, 35]
     }),
-    comercial: L.icon({
-      iconUrl: 'https://antonioxl1.github.io/MAPA/iconos/comercial_rojo.png',
-      iconSize: [35, 35]
-    }),
-    comercial2: L.icon({
-      iconUrl: 'https://antonioxl1.github.io/MAPA/iconos/comercial_verde.png',
-      iconSize: [35, 35]
-    }),
-    fabrica: L.icon({
-      iconUrl: 'https://antonioxl1.github.io/MAPA/iconos/fabrica_rojo.png',
-      iconSize: [35, 35]
+    fabricante: L.icon({
+      iconUrl: 'https://antonioxl1.github.io/MAPA/iconos/fabrica_verde.png',
+      iconSize: [35, 35],
+      iconAnchor: [17, 35]
     }),
     importador: L.icon({
-      iconUrl: 'https://antonioxl1.github.io/MAPA/iconos/fabrica_verde.png',
-      iconSize: [35, 35]
+      iconUrl: 'https://antonioxl1.github.io/MAPA/iconos/fabricante_verde.png',
+      iconSize: [35, 35],
+      iconAnchor: [17, 35]
     }),
     default: L.icon({
-      iconUrl: 'https://antonioxl1.github.io/MAPA/iconos/ipress_rojo.png',
-      iconSize: [35, 35]
+      iconUrl: 'https://antonioxl1.github.io/MAPA/iconos/ipress_verde.png',
+      iconSize: [35, 35],
+      iconAnchor: [17, 35]
     })
   };
 
@@ -87,7 +82,7 @@ document.addEventListener("DOMContentLoaded", function() {
         var columnas = fila.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
 
         var ubicacion = (columnas[2] || "").replace(/"/g, '').trim();
-        var tipo = (columnas[3] || "").toLowerCase();
+        var tipo = (columnas[3] || "").toLowerCase().trim();
 
         if (ubicacion.includes(",")) {
 
@@ -108,11 +103,11 @@ document.addEventListener("DOMContentLoaded", function() {
             else if (tipo.includes("saneamiento")) {
               icono = iconos.saneamiento;
             }
-            else if (tipo.includes("comercial")) {
-              icono = iconos.comercial;
+            else if (tipo.includes("fabricante")) {
+              icono = iconos.fabricante;
             }
-            else if (tipo.includes("fabrica") || tipo.includes("importador")) {
-              icono = iconos.fabrica;
+            else if (tipo.includes("importador")) {
+              icono = iconos.importador;
             }
 
             L.marker([lat, lng], { icon: icono })
@@ -127,6 +122,10 @@ document.addEventListener("DOMContentLoaded", function() {
         map.fitBounds(bounds);
       }
 
+    })
+    .catch(err => {
+      console.error(err);
+      alert("Error cargando datos");
     });
 
   // 🏷️ LEYENDA
@@ -136,10 +135,10 @@ document.addEventListener("DOMContentLoaded", function() {
     var div = L.DomUtil.create('div', 'legend');
 
     div.innerHTML += "<b>Tipos</b><br>";
-    div.innerHTML += "<img src='https://antonioxl1.github.io/MAPA/iconos/ipress_rojo.png'> IPRESS<br>";
+    div.innerHTML += "<img src='https://antonioxl1.github.io/MAPA/iconos/ipress_verde.png'> IPRESS<br>";
     div.innerHTML += "<img src='https://antonioxl1.github.io/MAPA/iconos/ipress_verde.png'> Saneamiento<br>";
-    div.innerHTML += "<img src='https://antonioxl1.github.io/MAPA/iconos/comercial_rojo.png'> Comercial<br>";
-    div.innerHTML += "<img src='https://antonioxl1.github.io/MAPA/iconos/fabrica_rojo.png'> Fábrica / Importador<br>";
+    div.innerHTML += "<img src='https://antonioxl1.github.io/MAPA/iconos/fabrica_verde.png'> Fabricante<br>";
+    div.innerHTML += "<img src='https://antonioxl1.github.io/MAPA/iconos/fabricante_verde.png'> Importador<br>";
 
     return div;
   };
