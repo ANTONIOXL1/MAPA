@@ -203,9 +203,6 @@
     <label>📅 Mes:</label>
     <select id="filtroMes">
       <option value="">Todos</option>
-      <option value="Enero">Enero</option>
-      <option value="Febrero">Febrero</option>
-      <option value="Marzo">Marzo</option>
     </select>
   </div>
 
@@ -237,10 +234,11 @@ document.addEventListener("DOMContentLoaded", function() {
   var markers = [];
   var dataGlobal = [];
 
-  // Función para normalizar texto
+  // Función para normalizar texto (sin acentos)
   function limpiar(txt) {
     if (!txt) return "";
-    return String(txt).toLowerCase().trim();
+    return String(txt).toLowerCase().trim()
+      .normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   }
 
   // Función para determinar si es conforme o no conforme
@@ -334,6 +332,29 @@ document.addEventListener("DOMContentLoaded", function() {
     });
   }
 
+  // Función para actualizar el selector de meses según los datos disponibles
+  function actualizarSelectorMeses() {
+    const mesesSet = new Set();
+    dataGlobal.forEach(d => {
+      if (d.mes && d.mes.trim()) {
+        mesesSet.add(d.mes.trim());
+      }
+    });
+    
+    const mesesOrdenados = Array.from(mesesSet).sort();
+    console.log("Meses disponibles:", mesesOrdenados);
+    
+    const selectMes = document.getElementById("filtroMes");
+    selectMes.innerHTML = '<option value="">Todos</option>';
+    
+    mesesOrdenados.forEach(mes => {
+      const option = document.createElement("option");
+      option.value = mes;
+      option.textContent = mes;
+      selectMes.appendChild(option);
+    });
+  }
+
   // Función para dibujar marcadores en el mapa
   function dibujar(data) {
     // Limpiar marcadores existentes
@@ -342,6 +363,12 @@ document.addEventListener("DOMContentLoaded", function() {
     
     // Actualizar contador
     document.getElementById("contador").textContent = `${data.length} establecimientos`;
+    
+    if (data.length === 0) {
+      // Mostrar mensaje si no hay datos
+      console.log("No hay datos para mostrar con los filtros actuales");
+      return;
+    }
     
     // Agregar nuevos marcadores
     data.forEach(d => {
@@ -367,8 +394,8 @@ document.addEventListener("DOMContentLoaded", function() {
       markers.push(marker);
     });
     
-    // Si hay datos, ajustar el zoom para mostrar todos los marcadores
-    if (data.length > 0 && markers.length > 0) {
+    // Ajustar el zoom para mostrar todos los marcadores
+    if (markers.length > 0) {
       var group = L.featureGroup(markers);
       map.fitBounds(group.getBounds().pad(0.1));
     }
@@ -380,6 +407,13 @@ document.addEventListener("DOMContentLoaded", function() {
     const filtroResultado = document.getElementById("filtroResultado").value;
     const filtroTipo = document.getElementById("filtroTipo").value;
     const filtroMes = document.getElementById("filtroMes").value;
+    
+    console.log("Filtrando por:", {
+      texto,
+      filtroResultado,
+      filtroTipo,
+      filtroMes
+    });
     
     const filtrados = dataGlobal.filter(d => {
       // Filtro por texto (distrito)
@@ -398,14 +432,19 @@ document.addEventListener("DOMContentLoaded", function() {
         matchTipo = limpiar(d.tipo) === limpiar(filtroTipo);
       }
       
-      // Filtro por mes
+      // Filtro por mes (comparación exacta sin normalizar)
       let matchMes = true;
       if (filtroMes) {
-        matchMes = limpiar(d.mes) === limpiar(filtroMes);
+        matchMes = d.mes === filtroMes;
       }
       
       return matchTexto && matchResultado && matchTipo && matchMes;
     });
+    
+    console.log(`Filtro aplicado: Total: ${dataGlobal.length}, Filtrados: ${filtrados.length}`);
+    if (filtrados.length === 0 && dataGlobal.length > 0) {
+      console.warn("⚠️ No hay resultados con los filtros actuales");
+    }
     
     dibujar(filtrados);
   }
@@ -437,17 +476,10 @@ document.addEventListener("DOMContentLoaded", function() {
       
       // Parsear CSV manualmente
       const lines = csvText.split("\n");
-      let headers = [];
       let datosCargados = 0;
       let errores = 0;
       
-      // Obtener encabezados
-      if (lines.length > 0) {
-        headers = lines[0].split(',').map(h => h.replace(/^"|"$/g, '').trim());
-        console.log("Encabezados:", headers);
-      }
-      
-      // Procesar datos desde la línea 1
+      // Saltar encabezado (primera línea)
       for (let i = 1; i < lines.length; i++) {
         const line = lines[i].trim();
         if (!line) continue;
@@ -495,6 +527,8 @@ document.addEventListener("DOMContentLoaded", function() {
             continue;
           }
           
+          const mes = cleanValues[6] ? cleanValues[6].trim() : "";
+          
           const registro = {
             lat: lat,
             lng: lng,
@@ -502,7 +536,7 @@ document.addEventListener("DOMContentLoaded", function() {
             tipo: cleanValues[3] || "No especificado",
             resultado: cleanValues[4] || "No especificado",
             distrito: cleanValues[5] || "Sin distrito",
-            mes: cleanValues[6] || "Sin mes"
+            mes: mes
           };
           
           dataGlobal.push(registro);
@@ -515,9 +549,12 @@ document.addEventListener("DOMContentLoaded", function() {
       }
       
       console.log(`📊 Cargados: ${datosCargados} registros | Errores: ${errores}`);
-      console.log("Tipos encontrados:", [...new Set(dataGlobal.map(d => d.tipo))]);
+      console.log("Ejemplo de primeros 3 registros:", dataGlobal.slice(0, 3));
+      console.log("Meses encontrados:", [...new Set(dataGlobal.map(d => d.mes))]);
       console.log("Resultados encontrados:", [...new Set(dataGlobal.map(d => d.resultado))]);
-      console.log("Estados normalizados:", [...new Set(dataGlobal.map(d => obtenerEstado(d.resultado)))]);
+      
+      // Actualizar selector de meses con los datos reales
+      actualizarSelectorMeses();
       
       // Ocultar loading
       loadingDiv.remove();
@@ -531,12 +568,6 @@ document.addEventListener("DOMContentLoaded", function() {
           return div;
         };
         errorMsg.addTo(map);
-        
-        // Datos de ejemplo para demostración
-        dataGlobal.push(
-          { lat: -12.0464, lng: -77.0428, direccion: "Centro de Salud Miraflores", tipo: "IPRESS", resultado: "Conforme", distrito: "Miraflores", mes: "Enero" },
-          { lat: -12.1, lng: -77.05, direccion: "Clínica San Pablo", tipo: "IPRESS", resultado: "No Conforme", distrito: "San Isidro", mes: "Febrero" }
-        );
       }
       
       dibujar(dataGlobal);
@@ -549,7 +580,7 @@ document.addEventListener("DOMContentLoaded", function() {
       const errorMsg = L.control({ position: 'topright' });
       errorMsg.onAdd = function() {
         const div = L.DomUtil.create('div', 'info error');
-        div.innerHTML = '<div style="background: white; padding: 10px; border-radius: 5px; color: red; border: 1px solid red;">❌ Error al cargar datos de Google Sheets<br>Usando datos de demostración</div>';
+        div.innerHTML = '<div style="background: white; padding: 10px; border-radius: 5px; color: red; border: 1px solid red;">❌ Error al cargar datos de Google Sheets<br>Verifica la URL y tu conexión a internet</div>';
         return div;
       };
       errorMsg.addTo(map);
@@ -562,6 +593,7 @@ document.addEventListener("DOMContentLoaded", function() {
         { lat: -12.07, lng: -77.04, direccion: "Importadora Global SAC", tipo: "Importador", resultado: "No Conforme", distrito: "Lince", mes: "Marzo" },
         { lat: -8.115, lng: -79.028, direccion: "Empresa Aguas de Trujillo", tipo: "Emp. Saneamiento", resultado: "Conforme", distrito: "Trujillo", mes: "Febrero" }
       );
+      actualizarSelectorMeses();
       dibujar(dataGlobal);
     });
 });
