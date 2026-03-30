@@ -73,10 +73,6 @@
     box-shadow: 0 0 0 3px rgba(0,123,255,0.1);
   }
 
-  #buscar {
-    min-width: 200px;
-  }
-
   .contador {
     margin-left: auto;
     background: #007bff;
@@ -126,10 +122,6 @@
       min-width: calc(50% - 20px);
     }
     
-    #buscar {
-      min-width: auto;
-    }
-    
     .contador {
       margin-left: 0;
       width: 100%;
@@ -175,8 +167,10 @@
 
 <div id="filtros">
   <div class="filtro-group">
-    <label>🔍 Buscar:</label>
-    <input type="text" id="buscar" placeholder="Distrito...">
+    <label>🏙️ Distrito:</label>
+    <select id="filtroDistrito">
+      <option value="">Todos los distritos</option>
+    </select>
   </div>
 
   <div class="filtro-group">
@@ -332,6 +326,29 @@ document.addEventListener("DOMContentLoaded", function() {
     });
   }
 
+  // Función para actualizar el selector de distritos según los datos disponibles
+  function actualizarSelectorDistritos() {
+    const distritosSet = new Set();
+    dataGlobal.forEach(d => {
+      if (d.distrito && d.distrito.trim() && d.distrito !== "Sin distrito") {
+        distritosSet.add(d.distrito.trim());
+      }
+    });
+    
+    const distritosOrdenados = Array.from(distritosSet).sort();
+    console.log("Distritos disponibles:", distritosOrdenados);
+    
+    const selectDistrito = document.getElementById("filtroDistrito");
+    selectDistrito.innerHTML = '<option value="">Todos los distritos</option>';
+    
+    distritosOrdenados.forEach(distrito => {
+      const option = document.createElement("option");
+      option.value = distrito;
+      option.textContent = distrito;
+      selectDistrito.appendChild(option);
+    });
+  }
+
   // Función para actualizar el selector de meses según los datos disponibles
   function actualizarSelectorMeses() {
     const mesesSet = new Set();
@@ -355,6 +372,29 @@ document.addEventListener("DOMContentLoaded", function() {
     });
   }
 
+  // Función para actualizar el selector de tipos según los datos disponibles
+  function actualizarSelectorTipos() {
+    const tiposSet = new Set();
+    dataGlobal.forEach(d => {
+      if (d.tipo && d.tipo.trim() && d.tipo !== "No especificado") {
+        tiposSet.add(d.tipo.trim());
+      }
+    });
+    
+    const tiposOrdenados = Array.from(tiposSet).sort();
+    console.log("Tipos disponibles:", tiposOrdenados);
+    
+    const selectTipo = document.getElementById("filtroTipo");
+    selectTipo.innerHTML = '<option value="">Todos</option>';
+    
+    tiposOrdenados.forEach(tipo => {
+      const option = document.createElement("option");
+      option.value = tipo;
+      option.textContent = tipo;
+      selectTipo.appendChild(option);
+    });
+  }
+
   // Función para dibujar marcadores en el mapa
   function dibujar(data) {
     // Limpiar marcadores existentes
@@ -365,7 +405,6 @@ document.addEventListener("DOMContentLoaded", function() {
     document.getElementById("contador").textContent = `${data.length} establecimientos`;
     
     if (data.length === 0) {
-      // Mostrar mensaje si no hay datos
       console.log("No hay datos para mostrar con los filtros actuales");
       return;
     }
@@ -403,21 +442,24 @@ document.addEventListener("DOMContentLoaded", function() {
 
   // Función para filtrar datos
   function filtrar() {
-    const texto = limpiar(document.getElementById("buscar").value);
+    const filtroDistrito = document.getElementById("filtroDistrito").value;
     const filtroResultado = document.getElementById("filtroResultado").value;
     const filtroTipo = document.getElementById("filtroTipo").value;
     const filtroMes = document.getElementById("filtroMes").value;
     
     console.log("Filtrando por:", {
-      texto,
+      filtroDistrito,
       filtroResultado,
       filtroTipo,
       filtroMes
     });
     
     const filtrados = dataGlobal.filter(d => {
-      // Filtro por texto (distrito)
-      const matchTexto = !texto || limpiar(d.distrito).includes(texto);
+      // Filtro por distrito (comparación exacta)
+      let matchDistrito = true;
+      if (filtroDistrito) {
+        matchDistrito = d.distrito === filtroDistrito;
+      }
       
       // Filtro por resultado
       let matchResultado = true;
@@ -429,16 +471,16 @@ document.addEventListener("DOMContentLoaded", function() {
       // Filtro por tipo
       let matchTipo = true;
       if (filtroTipo) {
-        matchTipo = limpiar(d.tipo) === limpiar(filtroTipo);
+        matchTipo = d.tipo === filtroTipo;
       }
       
-      // Filtro por mes (comparación exacta sin normalizar)
+      // Filtro por mes
       let matchMes = true;
       if (filtroMes) {
         matchMes = d.mes === filtroMes;
       }
       
-      return matchTexto && matchResultado && matchTipo && matchMes;
+      return matchDistrito && matchResultado && matchTipo && matchMes;
     });
     
     console.log(`Filtro aplicado: Total: ${dataGlobal.length}, Filtrados: ${filtrados.length}`);
@@ -450,7 +492,7 @@ document.addEventListener("DOMContentLoaded", function() {
   }
 
   // Configurar eventos de los filtros
-  document.getElementById("buscar").addEventListener("input", filtrar);
+  document.getElementById("filtroDistrito").addEventListener("change", filtrar);
   document.getElementById("filtroResultado").addEventListener("change", filtrar);
   document.getElementById("filtroTipo").addEventListener("change", filtrar);
   document.getElementById("filtroMes").addEventListener("change", filtrar);
@@ -527,8 +569,6 @@ document.addEventListener("DOMContentLoaded", function() {
             continue;
           }
           
-          const mes = cleanValues[6] ? cleanValues[6].trim() : "";
-          
           const registro = {
             lat: lat,
             lng: lng,
@@ -536,7 +576,7 @@ document.addEventListener("DOMContentLoaded", function() {
             tipo: cleanValues[3] || "No especificado",
             resultado: cleanValues[4] || "No especificado",
             distrito: cleanValues[5] || "Sin distrito",
-            mes: mes
+            mes: cleanValues[6] || "Sin mes"
           };
           
           dataGlobal.push(registro);
@@ -550,11 +590,15 @@ document.addEventListener("DOMContentLoaded", function() {
       
       console.log(`📊 Cargados: ${datosCargados} registros | Errores: ${errores}`);
       console.log("Ejemplo de primeros 3 registros:", dataGlobal.slice(0, 3));
+      console.log("Distritos encontrados:", [...new Set(dataGlobal.map(d => d.distrito))]);
       console.log("Meses encontrados:", [...new Set(dataGlobal.map(d => d.mes))]);
+      console.log("Tipos encontrados:", [...new Set(dataGlobal.map(d => d.tipo))]);
       console.log("Resultados encontrados:", [...new Set(dataGlobal.map(d => d.resultado))]);
       
-      // Actualizar selector de meses con los datos reales
+      // Actualizar selectores con los datos reales
+      actualizarSelectorDistritos();
       actualizarSelectorMeses();
+      actualizarSelectorTipos();
       
       // Ocultar loading
       loadingDiv.remove();
@@ -593,7 +637,9 @@ document.addEventListener("DOMContentLoaded", function() {
         { lat: -12.07, lng: -77.04, direccion: "Importadora Global SAC", tipo: "Importador", resultado: "No Conforme", distrito: "Lince", mes: "Marzo" },
         { lat: -8.115, lng: -79.028, direccion: "Empresa Aguas de Trujillo", tipo: "Emp. Saneamiento", resultado: "Conforme", distrito: "Trujillo", mes: "Febrero" }
       );
+      actualizarSelectorDistritos();
       actualizarSelectorMeses();
+      actualizarSelectorTipos();
       dibujar(dataGlobal);
     });
 });
