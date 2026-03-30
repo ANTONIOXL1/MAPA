@@ -2,13 +2,12 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<title>Mapa Perú PRO MAX</title>
+<title>Mapa Perú</title>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 
 <style>
 body { margin:0; font-family: Arial; }
-
 #map { height:90vh; }
 
 #filtros {
@@ -22,21 +21,6 @@ body { margin:0; font-family: Arial; }
 select, input {
   padding:6px;
 }
-
-/* 🔥 LEYENDA */
-.legend {
-  background: white;
-  padding: 10px;
-  line-height: 1.5;
-  border-radius: 8px;
-  box-shadow: 0 0 6px rgba(0,0,0,0.3);
-}
-
-.legend img {
-  width:20px;
-  vertical-align:middle;
-  margin-right:5px;
-}
 </style>
 </head>
 
@@ -47,23 +31,23 @@ select, input {
 
   <select id="filtroResultado">
     <option value="">Resultado</option>
-    <option>Conforme</option>
-    <option>No Conforme</option>
+    <option value="conforme">Conforme</option>
+    <option value="no">No Conforme</option>
   </select>
 
   <select id="filtroTipo">
     <option value="">Tipo</option>
-    <option>IPRESS</option>
-    <option>Emp. Saneamiento</option>
-    <option>Fabricante</option>
-    <option>Importador</option>
+    <option value="ipress">IPRESS</option>
+    <option value="saneamiento">Emp. Saneamiento</option>
+    <option value="fabricante">Fabricante</option>
+    <option value="importador">Importador</option>
   </select>
 
   <select id="filtroMes">
     <option value="">Mes</option>
-    <option>Enero</option>
-    <option>Febrero</option>
-    <option>Marzo</option>
+    <option value="enero">Enero</option>
+    <option value="febrero">Febrero</option>
+    <option value="marzo">Marzo</option>
   </select>
 </div>
 
@@ -87,10 +71,6 @@ document.addEventListener("DOMContentLoaded", function(){
     return (txt||"").toString().toLowerCase().trim();
   }
 
-  function limpiarTexto(txt){
-    return (txt||"").toString().replace(/"/g,'').trim();
-  }
-
   function crearIcono(url){
     return L.divIcon({
       html: `<img src="${url}" width="35">`,
@@ -100,63 +80,48 @@ document.addEventListener("DOMContentLoaded", function(){
     });
   }
 
-  // 🔥 ICONOS INTELIGENTES
   function icono(tipo, resultado){
 
     tipo = limpiar(tipo);
     resultado = limpiar(resultado);
 
-    var esNoConforme =
-      resultado.includes("no") ||
-      resultado.includes("incumple") ||
-      resultado.includes("observado");
+    var esNo = resultado.includes("no");
 
     if(tipo.includes("ipress") || tipo.includes("saneamiento")){
-      return esNoConforme
+      return esNo
         ? crearIcono('https://antonioxl1.github.io/MAPA/iconos/ipress_rojo.png')
         : crearIcono('https://antonioxl1.github.io/MAPA/iconos/ipress_verde.png');
     }
 
     if(tipo.includes("fabricante")){
-      return esNoConforme
+      return esNo
         ? crearIcono('https://antonioxl1.github.io/MAPA/iconos/fabrica_rojo.png')
         : crearIcono('https://antonioxl1.github.io/MAPA/iconos/fabrica_verde.png');
     }
 
     if(tipo.includes("importador")){
-      return esNoConforme
+      return esNo
         ? crearIcono('https://antonioxl1.github.io/MAPA/iconos/fabricante_rojo.png')
         : crearIcono('https://antonioxl1.github.io/MAPA/iconos/fabricante_verde.png');
     }
 
-    return esNoConforme
-      ? crearIcono('https://antonioxl1.github.io/MAPA/iconos/ipress_rojo.png')
-      : crearIcono('https://antonioxl1.github.io/MAPA/iconos/ipress_verde.png');
+    return crearIcono('https://antonioxl1.github.io/MAPA/iconos/ipress_verde.png');
   }
 
   function dibujar(data){
-
     markers.forEach(m => map.removeLayer(m));
     markers = [];
 
     data.forEach(d => {
-
       var m = L.marker([d.lat, d.lng], {
         icon: icono(d.tipo, d.resultado)
-      })
-      .addTo(map)
-      .bindPopup(`
-        <b>${d.direccion || "Sin dirección"}</b><br>
-        📍 ${d.distrito || "Sin distrito"}<br>
-        📅 ${d.mes || "Sin mes"}<br>
-        ⚠️ ${d.resultado || "Sin resultado"}<br>
-        🛑 ${d.medida || "Sin medida"}
-      `);
+      }).addTo(map);
 
       markers.push(m);
     });
   }
 
+  // 🔥 FILTRO REAL CORREGIDO
   function filtrar(){
 
     var texto = limpiar(document.getElementById("buscar").value);
@@ -166,10 +131,30 @@ document.addEventListener("DOMContentLoaded", function(){
 
     var filtrados = dataGlobal.filter(d => {
 
-      return (!texto || limpiar(d.distrito).includes(texto)) &&
-             (!res || limpiar(d.resultado).includes(res)) &&
-             (!tipo || limpiar(d.tipo).includes(tipo)) &&
-             (!mes || limpiar(d.mes).includes(mes));
+      var dRes = limpiar(d.resultado);
+      var dTipo = limpiar(d.tipo);
+      var dMes = limpiar(d.mes);
+      var dDistrito = limpiar(d.distrito);
+
+      // RESULTADO
+      var cumpleResultado = true;
+      if(res === "conforme"){
+        cumpleResultado = dRes.includes("conforme") && !dRes.includes("no");
+      } 
+      else if(res === "no"){
+        cumpleResultado = dRes.includes("no");
+      }
+
+      // TIPO
+      var cumpleTipo = !tipo || dTipo.includes(tipo);
+
+      // MES
+      var cumpleMes = !mes || dMes.includes(mes);
+
+      // TEXTO
+      var cumpleTexto = !texto || dDistrito.includes(texto);
+
+      return cumpleResultado && cumpleTipo && cumpleMes && cumpleTexto;
     });
 
     dibujar(filtrados);
@@ -180,74 +165,34 @@ document.addEventListener("DOMContentLoaded", function(){
   document.getElementById("filtroTipo").onchange = filtrar;
   document.getElementById("filtroMes").onchange = filtrar;
 
-  // 🔥 LEYENDA
-  var legend = L.control({position: "bottomright"});
-
-  legend.onAdd = function(){
-    var div = L.DomUtil.create("div", "legend");
-    div.innerHTML = `
-      <b>Leyenda</b><br>
-      <img src="https://antonioxl1.github.io/MAPA/iconos/ipress_verde.png"> Conforme<br>
-      <img src="https://antonioxl1.github.io/MAPA/iconos/ipress_rojo.png"> No Conforme<br>
-      <img src="https://antonioxl1.github.io/MAPA/iconos/fabrica_verde.png"> Fabricante<br>
-      <img src="https://antonioxl1.github.io/MAPA/iconos/fabrica_rojo.png"> Fabricante No Conforme
-    `;
-    return div;
-  };
-
-  legend.addTo(map);
-
-  // 🔥 CARGA CSV
-  fetch("https://docs.google.com/spreadsheets/d/e/2PACX-1vT5Mq_bCbWMooRZGFoXCVe4vt4vVlnWOaDwADRnO-pkNsC17935tuPbSzlwmT8MJUEF_oEzsGt37kEw/pub?gid=306903085&single=true&output=csv")
+  fetch("TU_CSV_AQUI")
   .then(r => r.text())
   .then(data => {
 
     var filas = data.split("\n");
-    var headers = filas[0].split(",").map(h => h.toLowerCase().trim());
 
-    function idx(nombre){
-      return headers.indexOf(nombre.toLowerCase());
-    }
+    filas.slice(1).forEach(f => {
 
-    var iDireccion = idx("direccion");
-    var iUbicacion = idx("latitud");
-    var iTipo = idx("tipo");
-    var iResultado = idx("resultado");
-    var iDistrito = idx("distrito");
-    var iMes = idx("mes");
-    var iMedida = idx("medida");
+      var c = f.split(",");
 
-    filas.slice(1).forEach(fila => {
+      if(c.length < 6) return;
 
-      if(!fila.trim()) return;
+      var coords = c[1].split(",");
 
-      var col = fila.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
-
-      var ubic = limpiarTexto(col[iUbicacion]);
-
-      if(!ubic.includes(",")) return;
-
-      var c = ubic.split(",");
-      var lat = parseFloat(c[0]);
-      var lng = parseFloat(c[1]);
-
-      if(isNaN(lat) || isNaN(lng)) return;
+      if(coords.length < 2) return;
 
       dataGlobal.push({
-        lat: lat,
-        lng: lng,
-        direccion: limpiarTexto(col[iDireccion]),
-        tipo: limpiarTexto(col[iTipo]),
-        resultado: limpiarTexto(col[iResultado]),
-        distrito: limpiarTexto(col[iDistrito]),
-        mes: limpiarTexto(col[iMes]),
-        medida: limpiarTexto(col[iMedida])
+        lat: parseFloat(coords[0]),
+        lng: parseFloat(coords[1]),
+        tipo: c[2],
+        resultado: c[3],
+        distrito: c[4],
+        mes: c[5]
       });
 
     });
 
     dibujar(dataGlobal);
-
   });
 
 });
