@@ -209,7 +209,7 @@ document.addEventListener("DOMContentLoaded", function() {
     return String(txt).toLowerCase().trim();
   }
 
-  // Función para determinar si es conforme o no conforme (CORREGIDA)
+  // Función para determinar si es conforme o no conforme
   function esConforme(resultado) {
     const resultadoLower = limpiar(resultado);
     // Primero verificar si es "no conforme" (contiene "no")
@@ -224,12 +224,15 @@ document.addEventListener("DOMContentLoaded", function() {
     return true;
   }
 
+  // Función para obtener el estado normalizado (CONFORME o NO CONFORME)
+  function obtenerEstado(resultado) {
+    return esConforme(resultado) ? "Conforme" : "No Conforme";
+  }
+
   // Función para crear íconos con colores según conformidad
   function crearIcono(tipo, resultado) {
     tipo = limpiar(tipo);
     const conforme = esConforme(resultado);
-    
-    console.log("Creando ícono para:", tipo, "Resultado:", resultado, "Es Conforme:", conforme); // Para depuración
     
     // Para IPRESS y Empresas de Saneamiento
     if (tipo.includes("ipress") || tipo.includes("saneamiento")) {
@@ -338,21 +341,45 @@ document.addEventListener("DOMContentLoaded", function() {
     }
   }
 
-  // Función para filtrar datos
+  // Función para filtrar datos (CORREGIDA)
   function filtrar() {
     const texto = limpiar(document.getElementById("buscar").value);
-    const res = limpiar(document.getElementById("filtroResultado").value);
-    const tipo = limpiar(document.getElementById("filtroTipo").value);
-    const mes = limpiar(document.getElementById("filtroMes").value);
+    const filtroResultado = document.getElementById("filtroResultado").value;
+    const filtroTipo = document.getElementById("filtroTipo").value;
+    const filtroMes = document.getElementById("filtroMes").value;
     
     const filtrados = dataGlobal.filter(d => {
+      // Filtro por texto (distrito)
       const matchTexto = !texto || limpiar(d.distrito).includes(texto);
-      const matchResultado = !res || limpiar(d.resultado).includes(res);
-      const matchTipo = !tipo || limpiar(d.tipo).includes(tipo);
-      const matchMes = !mes || limpiar(d.mes).includes(mes);
+      
+      // Filtro por resultado (CORREGIDO)
+      let matchResultado = true;
+      if (filtroResultado) {
+        const estadoItem = obtenerEstado(d.resultado);
+        matchResultado = estadoItem === filtroResultado;
+      }
+      
+      // Filtro por tipo
+      let matchTipo = true;
+      if (filtroTipo) {
+        matchTipo = limpiar(d.tipo) === limpiar(filtroTipo);
+      }
+      
+      // Filtro por mes
+      let matchMes = true;
+      if (filtroMes) {
+        matchMes = limpiar(d.mes) === limpiar(filtroMes);
+      }
       
       return matchTexto && matchResultado && matchTipo && matchMes;
     });
+    
+    console.log(`Filtro aplicado: Total: ${dataGlobal.length}, Filtrados: ${filtrados.length}`);
+    console.log("Valor del filtro resultado:", filtroResultado);
+    console.log("Primeros 3 items con su estado:", filtrados.slice(0, 3).map(d => ({
+      original: d.resultado,
+      estado: obtenerEstado(d.resultado)
+    })));
     
     dibujar(filtrados);
   }
@@ -374,7 +401,7 @@ document.addEventListener("DOMContentLoaded", function() {
       return response.text();
     })
     .then(csvText => {
-      console.log("CSV cargado, primeras líneas:", csvText.substring(0, 500));
+      console.log("CSV cargado");
       
       const lineas = csvText.split("\n");
       let datosCargados = 0;
@@ -386,11 +413,10 @@ document.addEventListener("DOMContentLoaded", function() {
         if (!linea) continue;
         
         try {
-          // Parsear CSV simple (sin comillas complejas)
+          // Parsear CSV
           const columnas = linea.split(',');
           
           if (columnas.length < 7) {
-            console.warn(`Línea ${i} tiene solo ${columnas.length} columnas`);
             continue;
           }
           
@@ -399,7 +425,6 @@ document.addEventListener("DOMContentLoaded", function() {
           
           const ubic = col[2] || "";
           if (!ubic.includes(",")) {
-            console.warn(`Línea ${i} no tiene coordenadas válidas:`, ubic);
             continue;
           }
           
@@ -408,7 +433,6 @@ document.addEventListener("DOMContentLoaded", function() {
           const lng = parseFloat(coordenadas[1]);
           
           if (isNaN(lat) || isNaN(lng)) {
-            console.warn(`Línea ${i} coordenadas inválidas:`, lat, lng);
             continue;
           }
           
@@ -422,7 +446,12 @@ document.addEventListener("DOMContentLoaded", function() {
             mes: col[6] || "Sin mes"
           };
           
-          console.log(`Registro ${i}:`, registro);
+          console.log(`Registro ${i}:`, {
+            tipo: registro.tipo,
+            resultado: registro.resultado,
+            estado: obtenerEstado(registro.resultado)
+          });
+          
           dataGlobal.push(registro);
           datosCargados++;
           
@@ -433,17 +462,16 @@ document.addEventListener("DOMContentLoaded", function() {
       }
       
       console.log(`✅ Cargados ${datosCargados} registros, ${errores} errores`);
+      console.log("Estados encontrados:", [...new Set(dataGlobal.map(d => obtenerEstado(d.resultado)))]);
       
       if (dataGlobal.length === 0) {
         console.warn("⚠️ No se encontraron datos, usando datos de ejemplo");
-        // Datos de ejemplo para demostración con diferentes tipos y estados
         dataGlobal.push(
           { lat: -12.0464, lng: -77.0428, direccion: "Centro de Salud Miraflores", tipo: "IPRESS", resultado: "Conforme", distrito: "Miraflores", mes: "Enero" },
           { lat: -12.1, lng: -77.05, direccion: "Clínica San Pablo", tipo: "IPRESS", resultado: "No Conforme", distrito: "San Isidro", mes: "Febrero" },
           { lat: -12.09, lng: -77.03, direccion: "Fábrica Textil Perú", tipo: "Fabricante", resultado: "Conforme", distrito: "La Victoria", mes: "Enero" },
           { lat: -12.07, lng: -77.04, direccion: "Importadora Global SAC", tipo: "Importador", resultado: "No Conforme", distrito: "Lince", mes: "Marzo" },
-          { lat: -8.115, lng: -79.028, direccion: "Empresa Aguas de Trujillo", tipo: "Emp. Saneamiento", resultado: "Conforme", distrito: "Trujillo", mes: "Febrero" },
-          { lat: -12.13, lng: -77.02, direccion: "Farmacia Salud Total", tipo: "IPRESS", resultado: "No Conforme", distrito: "Jesús María", mes: "Enero" }
+          { lat: -8.115, lng: -79.028, direccion: "Empresa Aguas de Trujillo", tipo: "Emp. Saneamiento", resultado: "Conforme", distrito: "Trujillo", mes: "Febrero" }
         );
       }
       
@@ -451,16 +479,6 @@ document.addEventListener("DOMContentLoaded", function() {
     })
     .catch(error => {
       console.error("❌ Error cargando datos:", error);
-      // Mostrar mensaje de error en el mapa
-      const errorMsg = L.control({ position: 'topright' });
-      errorMsg.onAdd = function() {
-        const div = L.DomUtil.create('div', 'info error');
-        div.innerHTML = '<div style="background: white; padding: 10px; border-radius: 5px; color: red; border: 1px solid red;">❌ Error al cargar datos. Verifica la conexión.<br>Usando datos de ejemplo.</div>';
-        return div;
-      };
-      errorMsg.addTo(map);
-      
-      // Datos de ejemplo para demostración
       dataGlobal.push(
         { lat: -12.0464, lng: -77.0428, direccion: "Centro de Salud Miraflores", tipo: "IPRESS", resultado: "Conforme", distrito: "Miraflores", mes: "Enero" },
         { lat: -12.1, lng: -77.05, direccion: "Clínica San Pablo", tipo: "IPRESS", resultado: "No Conforme", distrito: "San Isidro", mes: "Febrero" },
