@@ -202,50 +202,88 @@ document.addEventListener("DOMContentLoaded", function() {
   // Variables globales
   var markers = [];
   var dataGlobal = [];
-  var markerClusterGroup = null;
 
   // Función para normalizar texto
   function limpiar(txt) {
     if (!txt) return "";
-    return String(txt).toLowerCase().trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    return String(txt).toLowerCase().trim();
   }
 
-  // Función para crear íconos
-  function crearIcono(url) {
-    return L.divIcon({
-      html: `<div style="background: white; border-radius: 50%; padding: 2px; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">
-               <img src="${url}" style="width: 32px; height: 32px; display: block;">
-             </div>`,
-      className: 'custom-marker',
-      iconSize: [36, 36],
-      iconAnchor: [18, 36],
-      popupAnchor: [0, -18]
-    });
-  }
-
-  // Función para determinar el ícono según tipo y resultado
-  function obtenerIcono(tipo, resultado) {
+  // Función para crear íconos con colores según conformidad
+  function crearIcono(tipo, resultado) {
     tipo = limpiar(tipo);
     resultado = limpiar(resultado);
-    const esNoConforme = resultado.includes("no");
     
-    // Mapeo de tipos e íconos
-    const iconos = {
-      ipress: esNoConforme ? 'ipress_rojo.png' : 'ipress_verde.png',
-      saneamiento: esNoConforme ? 'ipress_rojo.png' : 'ipress_verde.png',
-      fabricante: esNoConforme ? 'fabrica_rojo.png' : 'fabrica_verde.png',
-      importador: esNoConforme ? 'fabricante_rojo.png' : 'fabricante_verde.png'
-    };
+    // Determinar si es conforme o no conforme
+    var esNoConforme = resultado.includes("no");
+    var esConforme = resultado.includes("conforme");
     
-    let iconName = iconos.fabricante_verde; // default
-    for (let key in iconos) {
-      if (tipo.includes(key)) {
-        iconName = iconos[key];
-        break;
+    console.log("Icono para:", tipo, resultado, "NoConforme:", esNoConforme); // Para depuración
+    
+    // Para IPRESS y Empresas de Saneamiento
+    if (tipo.includes("ipress") || tipo.includes("saneamiento")) {
+      if (esNoConforme) {
+        return L.icon({
+          iconUrl: 'https://antonioxl1.github.io/MAPA/iconos/ipress_rojo.png',
+          iconSize: [32, 32],
+          iconAnchor: [16, 32],
+          popupAnchor: [0, -32]
+        });
+      } else {
+        return L.icon({
+          iconUrl: 'https://antonioxl1.github.io/MAPA/iconos/ipress_verde.png',
+          iconSize: [32, 32],
+          iconAnchor: [16, 32],
+          popupAnchor: [0, -32]
+        });
       }
     }
     
-    return crearIcono(`https://antonioxl1.github.io/MAPA/iconos/${iconName}`);
+    // Para Fabricantes
+    if (tipo.includes("fabricante")) {
+      if (esNoConforme) {
+        return L.icon({
+          iconUrl: 'https://antonioxl1.github.io/MAPA/iconos/fabrica_rojo.png',
+          iconSize: [32, 32],
+          iconAnchor: [16, 32],
+          popupAnchor: [0, -32]
+        });
+      } else {
+        return L.icon({
+          iconUrl: 'https://antonioxl1.github.io/MAPA/iconos/fabrica_verde.png',
+          iconSize: [32, 32],
+          iconAnchor: [16, 32],
+          popupAnchor: [0, -32]
+        });
+      }
+    }
+    
+    // Para Importadores
+    if (tipo.includes("importador")) {
+      if (esNoConforme) {
+        return L.icon({
+          iconUrl: 'https://antonioxl1.github.io/MAPA/iconos/fabricante_rojo.png',
+          iconSize: [32, 32],
+          iconAnchor: [16, 32],
+          popupAnchor: [0, -32]
+        });
+      } else {
+        return L.icon({
+          iconUrl: 'https://antonioxl1.github.io/MAPA/iconos/fabricante_verde.png',
+          iconSize: [32, 32],
+          iconAnchor: [16, 32],
+          popupAnchor: [0, -32]
+        });
+      }
+    }
+    
+    // Ícono por defecto (verde)
+    return L.icon({
+      iconUrl: 'https://antonioxl1.github.io/MAPA/iconos/fabricante_verde.png',
+      iconSize: [32, 32],
+      iconAnchor: [16, 32],
+      popupAnchor: [0, -32]
+    });
   }
 
   // Función para dibujar marcadores en el mapa
@@ -260,7 +298,7 @@ document.addEventListener("DOMContentLoaded", function() {
     // Agregar nuevos marcadores
     data.forEach(d => {
       var marker = L.marker([d.lat, d.lng], {
-        icon: obtenerIcono(d.tipo, d.resultado)
+        icon: crearIcono(d.tipo, d.resultado)
       }).addTo(map);
       
       // Crear contenido del popup
@@ -268,7 +306,7 @@ document.addEventListener("DOMContentLoaded", function() {
       const resultadoText = d.resultado === "Conforme" ? "✅ Conforme" : "❌ No Conforme";
       
       marker.bindPopup(`
-        <div class="custom-popup" style="min-width: 200px;">
+        <div class="custom-popup" style="min-width: 220px;">
           <div class="popup-title">📍 ${d.direccion || 'Dirección no especificada'}</div>
           <div class="popup-detail">🏙️ Distrito: ${d.distrito || 'No especificado'}</div>
           <div class="popup-detail">🏢 Tipo: ${d.tipo || 'No especificado'}</div>
@@ -297,7 +335,7 @@ document.addEventListener("DOMContentLoaded", function() {
     const filtrados = dataGlobal.filter(d => {
       const matchTexto = !texto || limpiar(d.distrito).includes(texto);
       const matchResultado = !res || limpiar(d.resultado).includes(res);
-      const matchTipo = !tipo || limpiar(d.tipo).includes(tipo);
+      const matchTipo = !tipo || limpiar(d.tipo).toLowerCase().includes(tipo);
       const matchMes = !mes || limpiar(d.mes).includes(mes);
       
       return matchTexto && matchResultado && matchTipo && matchMes;
@@ -323,6 +361,8 @@ document.addEventListener("DOMContentLoaded", function() {
       return response.text();
     })
     .then(csvText => {
+      console.log("CSV cargado, primeras líneas:", csvText.substring(0, 500));
+      
       const lineas = csvText.split("\n");
       let datosCargados = 0;
       let errores = 0;
@@ -333,22 +373,33 @@ document.addEventListener("DOMContentLoaded", function() {
         if (!linea) continue;
         
         try {
-          // Parsear CSV respetando comillas
-          const coincidencias = linea.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g);
-          if (!coincidencias || coincidencias.length < 7) continue;
+          // Parsear CSV simple (sin comillas complejas)
+          const columnas = linea.split(',');
           
-          const col = coincidencias.map(c => c.replace(/^"|"$/g, ''));
+          if (columnas.length < 7) {
+            console.warn(`Línea ${i} tiene solo ${columnas.length} columnas`);
+            continue;
+          }
+          
+          // Limpiar comillas de cada campo
+          const col = columnas.map(c => c.replace(/^"|"$/g, '').trim());
           
           const ubic = col[2] || "";
-          if (!ubic.includes(",")) continue;
+          if (!ubic.includes(",")) {
+            console.warn(`Línea ${i} no tiene coordenadas válidas:`, ubic);
+            continue;
+          }
           
           const coordenadas = ubic.split(",");
           const lat = parseFloat(coordenadas[0]);
           const lng = parseFloat(coordenadas[1]);
           
-          if (isNaN(lat) || isNaN(lng)) continue;
+          if (isNaN(lat) || isNaN(lng)) {
+            console.warn(`Línea ${i} coordenadas inválidas:`, lat, lng);
+            continue;
+          }
           
-          dataGlobal.push({
+          const registro = {
             lat: lat,
             lng: lng,
             direccion: col[1] || "Sin dirección",
@@ -356,44 +407,52 @@ document.addEventListener("DOMContentLoaded", function() {
             resultado: col[4] || "No especificado",
             distrito: col[5] || "Sin distrito",
             mes: col[6] || "Sin mes"
-          });
+          };
           
+          console.log(`Registro ${i}:`, registro);
+          dataGlobal.push(registro);
           datosCargados++;
+          
         } catch (e) {
           errores++;
           console.warn(`Error procesando línea ${i}:`, e);
         }
       }
       
-      console.log(`Cargados ${datosCargados} registros, ${errores} errores`);
+      console.log(`✅ Cargados ${datosCargados} registros, ${errores} errores`);
       
       if (dataGlobal.length === 0) {
-        // Datos de ejemplo si no hay datos reales
-        console.warn("No se encontraron datos, usando datos de ejemplo");
+        console.warn("⚠️ No se encontraron datos, usando datos de ejemplo");
+        // Datos de ejemplo para demostración con diferentes tipos y estados
         dataGlobal.push(
-          { lat: -12.0464, lng: -77.0428, direccion: "Av. Ejemplo 123", tipo: "IPRESS", resultado: "Conforme", distrito: "Lima", mes: "Enero" },
-          { lat: -12.1, lng: -77.05, direccion: "Calle Ejemplo 456", tipo: "Fabricante", resultado: "No Conforme", distrito: "San Isidro", mes: "Febrero" }
+          { lat: -12.0464, lng: -77.0428, direccion: "Centro de Salud Miraflores", tipo: "IPRESS", resultado: "Conforme", distrito: "Miraflores", mes: "Enero" },
+          { lat: -12.1, lng: -77.05, direccion: "Clínica San Pablo", tipo: "IPRESS", resultado: "No Conforme", distrito: "San Isidro", mes: "Febrero" },
+          { lat: -12.09, lng: -77.03, direccion: "Fábrica Textil Perú", tipo: "Fabricante", resultado: "Conforme", distrito: "La Victoria", mes: "Enero" },
+          { lat: -12.07, lng: -77.04, direccion: "Importadora Global SAC", tipo: "Importador", resultado: "No Conforme", distrito: "Lince", mes: "Marzo" },
+          { lat: -8.115, lng: -79.028, direccion: "Empresa Aguas de Trujillo", tipo: "Emp. Saneamiento", resultado: "Conforme", distrito: "Trujillo", mes: "Febrero" }
         );
       }
       
       dibujar(dataGlobal);
     })
     .catch(error => {
-      console.error("Error cargando datos:", error);
+      console.error("❌ Error cargando datos:", error);
       // Mostrar mensaje de error en el mapa
       const errorMsg = L.control({ position: 'topright' });
       errorMsg.onAdd = function() {
         const div = L.DomUtil.create('div', 'info error');
-        div.innerHTML = '<div style="background: white; padding: 10px; border-radius: 5px; color: red;">❌ Error al cargar datos. Verifica la conexión.</div>';
+        div.innerHTML = '<div style="background: white; padding: 10px; border-radius: 5px; color: red; border: 1px solid red;">❌ Error al cargar datos. Verifica la conexión.<br>Usando datos de ejemplo.</div>';
         return div;
       };
       errorMsg.addTo(map);
       
       // Datos de ejemplo para demostración
       dataGlobal.push(
-        { lat: -12.0464, lng: -77.0428, direccion: "Centro de Salud Lima", tipo: "IPRESS", resultado: "Conforme", distrito: "Lima", mes: "Enero" },
-        { lat: -12.1, lng: -77.05, direccion: "Planta Industrial", tipo: "Fabricante", resultado: "No Conforme", distrito: "San Isidro", mes: "Febrero" },
-        { lat: -8.115, lng: -79.028, direccion: "Empresa Aguas", tipo: "Emp. Saneamiento", resultado: "Conforme", distrito: "Trujillo", mes: "Marzo" }
+        { lat: -12.0464, lng: -77.0428, direccion: "Centro de Salud Miraflores", tipo: "IPRESS", resultado: "Conforme", distrito: "Miraflores", mes: "Enero" },
+        { lat: -12.1, lng: -77.05, direccion: "Clínica San Pablo", tipo: "IPRESS", resultado: "No Conforme", distrito: "San Isidro", mes: "Febrero" },
+        { lat: -12.09, lng: -77.03, direccion: "Fábrica Textil Perú", tipo: "Fabricante", resultado: "Conforme", distrito: "La Victoria", mes: "Enero" },
+        { lat: -12.07, lng: -77.04, direccion: "Importadora Global SAC", tipo: "Importador", resultado: "No Conforme", distrito: "Lince", mes: "Marzo" },
+        { lat: -8.115, lng: -79.028, direccion: "Empresa Aguas de Trujillo", tipo: "Emp. Saneamiento", resultado: "Conforme", distrito: "Trujillo", mes: "Febrero" }
       );
       dibujar(dataGlobal);
     });
