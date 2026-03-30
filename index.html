@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<title>Mapa Perú FINAL</title>
+<title>Mapa Perú FINAL PRO</title>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 
@@ -38,7 +38,7 @@ select, input {
   <select id="filtroTipo">
     <option value="">Tipo</option>
     <option value="ipress">IPRESS</option>
-    <option value="saneamiento">Emp. Saneamiento</option>
+    <option value="saneamiento">Saneamiento</option>
     <option value="fabricante">Fabricante</option>
     <option value="importador">Importador</option>
   </select>
@@ -77,51 +77,42 @@ document.addEventListener("DOMContentLoaded", function(){
 
   function crearIcono(url){
     return L.divIcon({
-      html: `<img src="${url}" width="35">`,
+      html: `<img src="${url}" width="35" onerror="this.src='https://cdn-icons-png.flaticon.com/512/252/252025.png'">`,
       className:'',
       iconSize:[35,35],
       iconAnchor:[17,35]
     });
   }
 
- function icono(tipo, resultado){
+  function icono(tipo, resultado){
 
-  tipo = limpiar(tipo);
-  resultado = limpiar(resultado);
+    tipo = limpiar(tipo);
+    resultado = limpiar(resultado);
 
-  var esNoConforme = resultado.includes("no");
-  var esConforme = resultado.includes("conforme") && !resultado.includes("no");
+    var esNo = resultado.includes("no");
+    var esSi = resultado.includes("conforme") && !resultado.includes("no");
 
-  // IPRESS o SANEAMIENTO
-  if(tipo.includes("ipress") || tipo.includes("saneamiento")){
-    if(esNoConforme){
-      return crearIcono('https://antonioxl1.github.io/MAPA/iconos/ipress_rojo.png');
-    } else if(esConforme){
-      return crearIcono('https://antonioxl1.github.io/MAPA/iconos/ipress_verde.png');
+    // IPRESS / SANEAMIENTO
+    if(tipo.includes("ipress") || tipo.includes("saneamiento")){
+      if(esNo) return crearIcono('https://antonioxl1.github.io/MAPA/iconos/ipress_rojo.png');
+      if(esSi) return crearIcono('https://antonioxl1.github.io/MAPA/iconos/ipress_verde.png');
     }
-  }
 
-  // FABRICANTE
-  if(tipo.includes("fabricante")){
-    if(esNoConforme){
-      return crearIcono('https://antonioxl1.github.io/MAPA/iconos/fabrica_rojo.png');
-    } else if(esConforme){
-      return crearIcono('https://antonioxl1.github.io/MAPA/iconos/fabrica_verde.png');
+    // FABRICANTE
+    if(tipo.includes("fabricante")){
+      if(esNo) return crearIcono('https://antonioxl1.github.io/MAPA/iconos/fabrica_rojo.png');
+      if(esSi) return crearIcono('https://antonioxl1.github.io/MAPA/iconos/fabrica_verde.png');
     }
-  }
 
-  // IMPORTADOR
-  if(tipo.includes("importador")){
-    if(esNoConforme){
-      return crearIcono('https://antonioxl1.github.io/MAPA/iconos/fabricante_rojo.png');
-    } else if(esConforme){
-      return crearIcono('https://antonioxl1.github.io/MAPA/iconos/fabricante_verde.png');
+    // IMPORTADOR
+    if(tipo.includes("importador")){
+      if(esNo) return crearIcono('https://antonioxl1.github.io/MAPA/iconos/fabricante_rojo.png');
+      if(esSi) return crearIcono('https://antonioxl1.github.io/MAPA/iconos/fabricante_verde.png');
     }
-  }
 
-  // DEFAULT (SI ALGO FALLA)
-  return crearIcono('https://cdn-icons-png.flaticon.com/512/252/252025.png');
-}
+    // SI FALLA TODO
+    return crearIcono('https://cdn-icons-png.flaticon.com/512/252/252025.png');
+  }
 
   function dibujar(data){
 
@@ -160,22 +151,17 @@ document.addEventListener("DOMContentLoaded", function(){
       var dMes = limpiar(d.mes);
       var dDistrito = limpiar(d.distrito);
 
-      // RESULTADO CORRECTO
       var cumpleResultado = true;
+
       if(res === "conforme"){
         cumpleResultado = dRes.includes("conforme") && !dRes.includes("no");
-      } 
+      }
       else if(res === "no"){
         cumpleResultado = dRes.includes("no");
       }
 
-      // TIPO
       var cumpleTipo = !tipo || dTipo.includes(tipo);
-
-      // MES
       var cumpleMes = !mes || dMes.includes(mes);
-
-      // DISTRITO
       var cumpleTexto = !texto || dDistrito.includes(texto);
 
       return cumpleResultado && cumpleTipo && cumpleMes && cumpleTexto;
