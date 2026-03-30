@@ -1,101 +1,193 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <title>Mapa Perú - Con Iconos Condicionales</title>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
-  <style>
-    body { margin:0; }
-    #map { height:100vh; width:100%; }
-    .leaflet-marker-icon, .leaflet-div-icon { background: transparent !important; border: none !important; }
-  </style>
+<meta charset="UTF-8">
+<title>Mapa Perú PRO</title>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+
+<style>
+body { margin:0; font-family: Arial; }
+
+#map { height:90vh; }
+
+/* 🔥 Panel de filtros */
+#filtros {
+  padding:10px;
+  background:#f4f4f4;
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+}
+
+select, input {
+  padding:5px;
+}
+</style>
 </head>
+
 <body>
+
+<div id="filtros">
+  <input type="text" id="buscar" placeholder="Buscar distrito...">
+
+  <select id="filtroResultado">
+    <option value="">Resultado</option>
+    <option>Conforme</option>
+    <option>No Conforme</option>
+  </select>
+
+  <select id="filtroTipo">
+    <option value="">Tipo</option>
+    <option>IPRESS</option>
+    <option>Emp. Saneamiento</option>
+    <option>Fabricante</option>
+    <option>Importador</option>
+  </select>
+
+  <select id="filtroMes">
+    <option value="">Mes</option>
+    <option>Enero</option>
+    <option>Febrero</option>
+    <option>Marzo</option>
+  </select>
+</div>
+
 <div id="map"></div>
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
 <script>
 document.addEventListener("DOMContentLoaded", function(){
 
-  // 1️⃣ Crear mapa centrado en Perú
   var map = L.map('map').setView([-9.19, -75.0152], 6);
 
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '© OpenStreetMap'
   }).addTo(map);
 
-  // 2️⃣ Función para crear icono
-  function crearIcono(url) {
+  var markers = [];
+  var dataGlobal = [];
+
+  function limpiar(txt){
+    return (txt||"").toLowerCase().trim();
+  }
+
+  function crearIcono(url){
     return L.divIcon({
-      html: `<img src="${url}" style="width:35px;height:35px;">`,
-      className: '',
-      iconSize: [35,35],
-      iconAnchor: [17,35]
+      html: `<img src="${url}" width="35">`,
+      className:'',
+      iconSize:[35,35],
+      iconAnchor:[17,35]
     });
   }
 
-  // 3️⃣ Mapear iconos según Tipo + Resultado
-  function seleccionarIcono(tipo, resultado) {
-    tipo = tipo.toLowerCase();
-    resultado = resultado.toLowerCase();
-    
-    if((tipo=="ipress" || tipo=="emp. saneamiento") && resultado=="conforme") return crearIcono('https://antonioxl1.github.io/MAPA/iconos/ipress_verde.png');
-    if((tipo=="ipress" || tipo=="emp. saneamiento") && resultado=="no conforme") return crearIcono('https://antonioxl1.github.io/MAPA/iconos/ipress_rojo.png');
-    if(tipo=="fabricante" && resultado=="conforme") return crearIcono('https://antonioxl1.github.io/MAPA/iconos/fabrica_verde.png');
-    if(tipo=="fabricante" && resultado=="no conforme") return crearIcono('https://antonioxl1.github.io/MAPA/iconos/fabrica_rojo.png');
-    if(tipo=="importador" && resultado=="conforme") return crearIcono('https://antonioxl1.github.io/MAPA/iconos/fabricante_verde.png');
-    if(tipo=="importador" && resultado=="no conforme") return crearIcono('https://antonioxl1.github.io/MAPA/iconos/fabricante_rojo.png');
+  function icono(tipo, resultado){
+    tipo = limpiar(tipo);
+    resultado = limpiar(resultado);
 
-    // Default
-    return crearIcono('https://antonioxl1.github.io/MAPA/iconos/ipress_verde.png');
+    if((tipo.includes("ipress")||tipo.includes("saneamiento")) && resultado.includes("no"))
+      return crearIcono('https://antonioxl1.github.io/MAPA/iconos/ipress_rojo.png');
+
+    if((tipo.includes("ipress")||tipo.includes("saneamiento")))
+      return crearIcono('https://antonioxl1.github.io/MAPA/iconos/ipress_verde.png');
+
+    if(tipo.includes("fabricante") && resultado.includes("no"))
+      return crearIcono('https://antonioxl1.github.io/MAPA/iconos/fabrica_rojo.png');
+
+    if(tipo.includes("fabricante"))
+      return crearIcono('https://antonioxl1.github.io/MAPA/iconos/fabrica_verde.png');
+
+    if(tipo.includes("importador") && resultado.includes("no"))
+      return crearIcono('https://antonioxl1.github.io/MAPA/iconos/fabricante_rojo.png');
+
+    return crearIcono('https://antonioxl1.github.io/MAPA/iconos/fabricante_verde.png');
   }
 
-  // 4️⃣ Cargar CSV de Google Sheets
+  function dibujar(data){
+
+    markers.forEach(m => map.removeLayer(m));
+    markers = [];
+
+    data.forEach(d => {
+
+      var m = L.marker([d.lat, d.lng], {
+        icon: icono(d.tipo, d.resultado)
+      })
+      .addTo(map)
+      .bindPopup(`
+        <b>${d.direccion}</b><br>
+        ${d.distrito}<br>
+        ${d.resultado}
+      `);
+
+      markers.push(m);
+    });
+
+  }
+
+  function filtrar(){
+
+    var texto = limpiar(document.getElementById("buscar").value);
+    var res = limpiar(document.getElementById("filtroResultado").value);
+    var tipo = limpiar(document.getElementById("filtroTipo").value);
+    var mes = limpiar(document.getElementById("filtroMes").value);
+
+    var filtrados = dataGlobal.filter(d => {
+
+      return (!texto || limpiar(d.distrito).includes(texto)) &&
+             (!res || limpiar(d.resultado).includes(res)) &&
+             (!tipo || limpiar(d.tipo).includes(tipo)) &&
+             (!mes || limpiar(d.mes).includes(mes));
+    });
+
+    dibujar(filtrados);
+  }
+
+  // eventos
+  document.getElementById("buscar").oninput = filtrar;
+  document.getElementById("filtroResultado").onchange = filtrar;
+  document.getElementById("filtroTipo").onchange = filtrar;
+  document.getElementById("filtroMes").onchange = filtrar;
+
+  // cargar CSV
   fetch("https://docs.google.com/spreadsheets/d/e/2PACX-1vT5Mq_bCbWMooRZGFoXCVe4vt4vVlnWOaDwADRnO-pkNsC17935tuPbSzlwmT8MJUEF_oEzsGt37kEw/pub?gid=306903085&single=true&output=csv")
-  .then(res => res.text())
-  .then(data => {
+  .then(r=>r.text())
+  .then(data=>{
 
     var filas = data.split("\n");
 
-    filas.slice(1).forEach(fila => {
-      if(!fila.trim()) return;
+    filas.slice(1).forEach(fila=>{
 
-      // Separar columnas respetando comillas
-      var columnas = fila.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+      var col = fila.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
 
-      var direccion = columnas[1] || "Sin nombre";
-      var ubicacion = (columnas[2] || "").replace(/"/g,'').trim();
-      var tipo = (columnas[3] || "").trim();
-      var resultado = (columnas[4] || "").trim(); // Nueva columna Resultado
+      var ubic = (col[2]||"").replace(/"/g,'');
+      if(!ubic.includes(",")) return;
 
-      if(!ubicacion.includes(",")) return;
-      var coords = ubicacion.split(",");
-      var lat = parseFloat(coords[0]);
-      var lng = parseFloat(coords[1]);
-      if(isNaN(lat) || isNaN(lng)) return;
+      var c = ubic.split(",");
+      var lat = parseFloat(c[0]);
+      var lng = parseFloat(c[1]);
 
-      // Seleccionar icono según tipo + resultado
-      var icono = seleccionarIcono(tipo, resultado);
+      if(isNaN(lat)||isNaN(lng)) return;
 
-      // Agregar marcador
-      L.marker([lat,lng], {icon: icono})
-        .addTo(map)
-        .bindPopup(`
-          <b>${direccion}</b><br>
-          Tipo: ${tipo}<br>
-          Resultado: ${resultado}<br>
-          Lat: ${lat}<br>
-          Lng: ${lng}
-        `);
+      dataGlobal.push({
+        lat:lat,
+        lng:lng,
+        direccion:col[1],
+        tipo:col[3],
+        resultado:col[4],
+        distrito:col[5] || "",
+        mes:col[6] || ""
+      });
+
     });
 
-  })
-  .catch(err => {
-    console.error(err);
-    alert("Error cargando CSV");
+    dibujar(dataGlobal);
+
   });
 
 });
 </script>
+
 </body>
 </html>
