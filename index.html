@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<title>Mapa Perú PRO</title>
+<title>Mapa Perú PRO FINAL</title>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 
@@ -11,7 +11,7 @@ body { margin:0; font-family: Arial; }
 
 #map { height:90vh; }
 
-/* 🔥 Panel de filtros */
+/* Panel filtros */
 #filtros {
   padding:10px;
   background:#f4f4f4;
@@ -21,7 +21,12 @@ body { margin:0; font-family: Arial; }
 }
 
 select, input {
-  padding:5px;
+  padding:6px;
+}
+
+/* eliminar fondo gris iconos */
+.leaflet-marker-icon img {
+  background: transparent !important;
 }
 </style>
 </head>
@@ -29,6 +34,7 @@ select, input {
 <body>
 
 <div id="filtros">
+
   <input type="text" id="buscar" placeholder="Buscar distrito...">
 
   <select id="filtroResultado">
@@ -51,6 +57,7 @@ select, input {
     <option>Febrero</option>
     <option>Marzo</option>
   </select>
+
 </div>
 
 <div id="map"></div>
@@ -70,7 +77,7 @@ document.addEventListener("DOMContentLoaded", function(){
   var dataGlobal = [];
 
   function limpiar(txt){
-    return (txt||"").toLowerCase().trim();
+    return (txt||"").toString().toLowerCase().trim();
   }
 
   function crearIcono(url){
@@ -86,10 +93,10 @@ document.addEventListener("DOMContentLoaded", function(){
     tipo = limpiar(tipo);
     resultado = limpiar(resultado);
 
-    if((tipo.includes("ipress")||tipo.includes("saneamiento")) && resultado.includes("no"))
+    if((tipo.includes("ipress") || tipo.includes("saneamiento")) && resultado.includes("no"))
       return crearIcono('https://antonioxl1.github.io/MAPA/iconos/ipress_rojo.png');
 
-    if((tipo.includes("ipress")||tipo.includes("saneamiento")))
+    if((tipo.includes("ipress") || tipo.includes("saneamiento")))
       return crearIcono('https://antonioxl1.github.io/MAPA/iconos/ipress_verde.png');
 
     if(tipo.includes("fabricante") && resultado.includes("no"))
@@ -117,13 +124,14 @@ document.addEventListener("DOMContentLoaded", function(){
       .addTo(map)
       .bindPopup(`
         <b>${d.direccion}</b><br>
-        ${d.distrito}<br>
-        ${d.resultado}
+        📍 ${d.distrito}<br>
+        📅 ${d.mes}<br>
+        ⚠️ ${d.resultado}<br>
+        🛑 ${d.medida}
       `);
 
       markers.push(m);
     });
-
   }
 
   function filtrar(){
@@ -144,43 +152,64 @@ document.addEventListener("DOMContentLoaded", function(){
     dibujar(filtrados);
   }
 
-  // eventos
   document.getElementById("buscar").oninput = filtrar;
   document.getElementById("filtroResultado").onchange = filtrar;
   document.getElementById("filtroTipo").onchange = filtrar;
   document.getElementById("filtroMes").onchange = filtrar;
 
-  // cargar CSV
+  // 🔥 CARGAR CSV CORRECTO
   fetch("https://docs.google.com/spreadsheets/d/e/2PACX-1vT5Mq_bCbWMooRZGFoXCVe4vt4vVlnWOaDwADRnO-pkNsC17935tuPbSzlwmT8MJUEF_oEzsGt37kEw/pub?gid=306903085&single=true&output=csv")
-  .then(r=>r.text())
-  .then(data=>{
+  .then(r => r.text())
+  .then(data => {
 
     var filas = data.split("\n");
 
-    filas.slice(1).forEach(fila=>{
+    var headers = filas[0].split(",");
+
+    function getIndex(nombre){
+      return headers.findIndex(h => 
+        h.toLowerCase().trim() === nombre.toLowerCase()
+      );
+    }
+
+    var iDireccion = getIndex("direccion");
+    var iUbicacion = getIndex("latitud");
+    var iTipo = getIndex("tipo");
+    var iResultado = getIndex("resultado");
+    var iDistrito = getIndex("distrito");
+    var iMes = getIndex("mes");
+    var iMedida = getIndex("medida");
+
+    filas.slice(1).forEach(fila => {
+
+      if(!fila.trim()) return;
 
       var col = fila.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
 
-      var ubic = (col[2]||"").replace(/"/g,'');
+      var ubic = (col[iUbicacion] || "").replace(/"/g,'');
+
       if(!ubic.includes(",")) return;
 
       var c = ubic.split(",");
       var lat = parseFloat(c[0]);
       var lng = parseFloat(c[1]);
 
-      if(isNaN(lat)||isNaN(lng)) return;
+      if(isNaN(lat) || isNaN(lng)) return;
 
       dataGlobal.push({
-        lat:lat,
-        lng:lng,
-        direccion:col[1],
-        tipo:col[3],
-        resultado:col[4],
-        distrito:col[5] || "",
-        mes:col[6] || ""
+        lat: lat,
+        lng: lng,
+        direccion: col[iDireccion] || "Sin nombre",
+        tipo: col[iTipo],
+        resultado: col[iResultado],
+        distrito: col[iDistrito],
+        mes: col[iMes],
+        medida: col[iMedida]
       });
 
     });
+
+    console.log(dataGlobal); // verificar
 
     dibujar(dataGlobal);
 
