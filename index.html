@@ -11,7 +11,6 @@ body { margin:0; font-family: Arial; }
 
 #map { height:90vh; }
 
-/* Panel filtros */
 #filtros {
   padding:10px;
   background:#f4f4f4;
@@ -23,18 +22,12 @@ body { margin:0; font-family: Arial; }
 select, input {
   padding:6px;
 }
-
-/* eliminar fondo gris iconos */
-.leaflet-marker-icon img {
-  background: transparent !important;
-}
 </style>
 </head>
 
 <body>
 
 <div id="filtros">
-
   <input type="text" id="buscar" placeholder="Buscar distrito...">
 
   <select id="filtroResultado">
@@ -57,7 +50,6 @@ select, input {
     <option>Febrero</option>
     <option>Marzo</option>
   </select>
-
 </div>
 
 <div id="map"></div>
@@ -80,6 +72,10 @@ document.addEventListener("DOMContentLoaded", function(){
     return (txt||"").toString().toLowerCase().trim();
   }
 
+  function limpiarTexto(txt){
+    return (txt||"").toString().replace(/"/g,'').trim();
+  }
+
   function crearIcono(url){
     return L.divIcon({
       html: `<img src="${url}" width="35">`,
@@ -90,8 +86,11 @@ document.addEventListener("DOMContentLoaded", function(){
   }
 
   function icono(tipo, resultado){
+
     tipo = limpiar(tipo);
     resultado = limpiar(resultado);
+
+    if(!tipo) return crearIcono('https://antonioxl1.github.io/MAPA/iconos/ipress_verde.png');
 
     if((tipo.includes("ipress") || tipo.includes("saneamiento")) && resultado.includes("no"))
       return crearIcono('https://antonioxl1.github.io/MAPA/iconos/ipress_rojo.png');
@@ -123,11 +122,11 @@ document.addEventListener("DOMContentLoaded", function(){
       })
       .addTo(map)
       .bindPopup(`
-        <b>${d.direccion}</b><br>
-        📍 ${d.distrito}<br>
-        📅 ${d.mes}<br>
-        ⚠️ ${d.resultado}<br>
-        🛑 ${d.medida}
+        <b>${d.direccion || "Sin dirección"}</b><br>
+        📍 ${d.distrito || "Sin distrito"}<br>
+        📅 ${d.mes || "Sin mes"}<br>
+        ⚠️ ${d.resultado || "Sin resultado"}<br>
+        🛑 ${d.medida || "Sin medida"}
       `);
 
       markers.push(m);
@@ -157,28 +156,27 @@ document.addEventListener("DOMContentLoaded", function(){
   document.getElementById("filtroTipo").onchange = filtrar;
   document.getElementById("filtroMes").onchange = filtrar;
 
-  // 🔥 CARGAR CSV CORRECTO
   fetch("https://docs.google.com/spreadsheets/d/e/2PACX-1vT5Mq_bCbWMooRZGFoXCVe4vt4vVlnWOaDwADRnO-pkNsC17935tuPbSzlwmT8MJUEF_oEzsGt37kEw/pub?gid=306903085&single=true&output=csv")
   .then(r => r.text())
   .then(data => {
 
     var filas = data.split("\n");
 
-    var headers = filas[0].split(",");
+    var headers = filas[0].split(",").map(h => h.toLowerCase().trim());
 
-    function getIndex(nombre){
-      return headers.findIndex(h => 
-        h.toLowerCase().trim() === nombre.toLowerCase()
-      );
+    function idx(nombre){
+      return headers.indexOf(nombre.toLowerCase());
     }
 
-    var iDireccion = getIndex("direccion");
-    var iUbicacion = getIndex("latitud");
-    var iTipo = getIndex("tipo");
-    var iResultado = getIndex("resultado");
-    var iDistrito = getIndex("distrito");
-    var iMes = getIndex("mes");
-    var iMedida = getIndex("medida");
+    var iDireccion = idx("direccion");
+    var iUbicacion = idx("latitud");
+    var iTipo = idx("tipo");
+    var iResultado = idx("resultado");
+    var iDistrito = idx("distrito");
+    var iMes = idx("mes");
+    var iMedida = idx("medida");
+
+    console.log("HEADERS:", headers);
 
     filas.slice(1).forEach(fila => {
 
@@ -186,7 +184,7 @@ document.addEventListener("DOMContentLoaded", function(){
 
       var col = fila.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
 
-      var ubic = (col[iUbicacion] || "").replace(/"/g,'');
+      var ubic = limpiarTexto(col[iUbicacion]);
 
       if(!ubic.includes(",")) return;
 
@@ -199,20 +197,24 @@ document.addEventListener("DOMContentLoaded", function(){
       dataGlobal.push({
         lat: lat,
         lng: lng,
-        direccion: col[iDireccion] || "Sin nombre",
-        tipo: col[iTipo],
-        resultado: col[iResultado],
-        distrito: col[iDistrito],
-        mes: col[iMes],
-        medida: col[iMedida]
+        direccion: limpiarTexto(col[iDireccion]),
+        tipo: limpiarTexto(col[iTipo]),
+        resultado: limpiarTexto(col[iResultado]),
+        distrito: limpiarTexto(col[iDistrito]),
+        mes: limpiarTexto(col[iMes]),
+        medida: limpiarTexto(col[iMedida])
       });
 
     });
 
-    console.log(dataGlobal); // verificar
+    console.log("DATA OK:", dataGlobal);
 
     dibujar(dataGlobal);
 
+  })
+  .catch(err => {
+    console.error(err);
+    alert("Error cargando datos");
   });
 
 });
