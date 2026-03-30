@@ -209,20 +209,31 @@ document.addEventListener("DOMContentLoaded", function() {
     return String(txt).toLowerCase().trim();
   }
 
+  // Función para determinar si es conforme o no conforme (CORREGIDA)
+  function esConforme(resultado) {
+    const resultadoLower = limpiar(resultado);
+    // Primero verificar si es "no conforme" (contiene "no")
+    if (resultadoLower.includes("no")) {
+      return false;
+    }
+    // Si no contiene "no", verificar si es "conforme"
+    if (resultadoLower.includes("conforme")) {
+      return true;
+    }
+    // Por defecto, si no se puede determinar, asumir conforme
+    return true;
+  }
+
   // Función para crear íconos con colores según conformidad
   function crearIcono(tipo, resultado) {
     tipo = limpiar(tipo);
-    resultado = limpiar(resultado);
+    const conforme = esConforme(resultado);
     
-    // Determinar si es conforme o no conforme
-    var esNoConforme = resultado.includes("no");
-    var esConforme = resultado.includes("conforme");
-    
-    console.log("Icono para:", tipo, resultado, "NoConforme:", esNoConforme); // Para depuración
+    console.log("Creando ícono para:", tipo, "Resultado:", resultado, "Es Conforme:", conforme); // Para depuración
     
     // Para IPRESS y Empresas de Saneamiento
     if (tipo.includes("ipress") || tipo.includes("saneamiento")) {
-      if (esNoConforme) {
+      if (!conforme) {
         return L.icon({
           iconUrl: 'https://antonioxl1.github.io/MAPA/iconos/ipress_rojo.png',
           iconSize: [32, 32],
@@ -241,7 +252,7 @@ document.addEventListener("DOMContentLoaded", function() {
     
     // Para Fabricantes
     if (tipo.includes("fabricante")) {
-      if (esNoConforme) {
+      if (!conforme) {
         return L.icon({
           iconUrl: 'https://antonioxl1.github.io/MAPA/iconos/fabrica_rojo.png',
           iconSize: [32, 32],
@@ -260,7 +271,7 @@ document.addEventListener("DOMContentLoaded", function() {
     
     // Para Importadores
     if (tipo.includes("importador")) {
-      if (esNoConforme) {
+      if (!conforme) {
         return L.icon({
           iconUrl: 'https://antonioxl1.github.io/MAPA/iconos/fabricante_rojo.png',
           iconSize: [32, 32],
@@ -302,8 +313,9 @@ document.addEventListener("DOMContentLoaded", function() {
       }).addTo(map);
       
       // Crear contenido del popup
-      const resultadoClass = d.resultado === "Conforme" ? "badge-conforme" : "badge-no-conforme";
-      const resultadoText = d.resultado === "Conforme" ? "✅ Conforme" : "❌ No Conforme";
+      const conforme = esConforme(d.resultado);
+      const resultadoClass = conforme ? "badge-conforme" : "badge-no-conforme";
+      const resultadoText = conforme ? "✅ Conforme" : "❌ No Conforme";
       
       marker.bindPopup(`
         <div class="custom-popup" style="min-width: 220px;">
@@ -312,6 +324,7 @@ document.addEventListener("DOMContentLoaded", function() {
           <div class="popup-detail">🏢 Tipo: ${d.tipo || 'No especificado'}</div>
           <div class="popup-detail">📅 Mes: ${d.mes || 'No especificado'}</div>
           <div class="badge ${resultadoClass}" style="margin-top: 8px;">${resultadoText}</div>
+          <div class="popup-detail" style="font-size: 10px; color: #999; margin-top: 5px;">Dato original: ${d.resultado}</div>
         </div>
       `, { maxWidth: 300 });
       
@@ -335,7 +348,7 @@ document.addEventListener("DOMContentLoaded", function() {
     const filtrados = dataGlobal.filter(d => {
       const matchTexto = !texto || limpiar(d.distrito).includes(texto);
       const matchResultado = !res || limpiar(d.resultado).includes(res);
-      const matchTipo = !tipo || limpiar(d.tipo).toLowerCase().includes(tipo);
+      const matchTipo = !tipo || limpiar(d.tipo).includes(tipo);
       const matchMes = !mes || limpiar(d.mes).includes(mes);
       
       return matchTexto && matchResultado && matchTipo && matchMes;
@@ -429,7 +442,8 @@ document.addEventListener("DOMContentLoaded", function() {
           { lat: -12.1, lng: -77.05, direccion: "Clínica San Pablo", tipo: "IPRESS", resultado: "No Conforme", distrito: "San Isidro", mes: "Febrero" },
           { lat: -12.09, lng: -77.03, direccion: "Fábrica Textil Perú", tipo: "Fabricante", resultado: "Conforme", distrito: "La Victoria", mes: "Enero" },
           { lat: -12.07, lng: -77.04, direccion: "Importadora Global SAC", tipo: "Importador", resultado: "No Conforme", distrito: "Lince", mes: "Marzo" },
-          { lat: -8.115, lng: -79.028, direccion: "Empresa Aguas de Trujillo", tipo: "Emp. Saneamiento", resultado: "Conforme", distrito: "Trujillo", mes: "Febrero" }
+          { lat: -8.115, lng: -79.028, direccion: "Empresa Aguas de Trujillo", tipo: "Emp. Saneamiento", resultado: "Conforme", distrito: "Trujillo", mes: "Febrero" },
+          { lat: -12.13, lng: -77.02, direccion: "Farmacia Salud Total", tipo: "IPRESS", resultado: "No Conforme", distrito: "Jesús María", mes: "Enero" }
         );
       }
       
